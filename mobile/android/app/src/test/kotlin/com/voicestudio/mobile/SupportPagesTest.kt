@@ -85,12 +85,14 @@ class SupportPagesTest {
     }
 
     @Test fun projectArtAndSponsorLabelsAreBundledAndLinksRequireATap() {
-        compose.setContent {Content(light=true,large=true) {OtherAppsScreen()}}
-        compose.waitUntil(5000) {compose.onAllNodesWithTag("support.artwork.spicrawl",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
-        capture("android-other-apps-large-text")
-        assertTrue(opened.isEmpty())
         val expected=listOf("opengtm" to "https://github.com/debpalash/OpenGTM","opal" to "https://github.com/debpalash/Opal",
             "supermetry" to "https://github.com/velixio/supermetry","spicrawl" to "https://spicrawl.com")
+        compose.setContent {Content(light=true,large=true) {OtherAppsScreen()}}
+        compose.waitUntil(5000) {expected.all {(id,_) ->
+            compose.onAllNodesWithTag("support.artwork.$id",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()
+        }}
+        capture("android-other-apps-large-text")
+        assertTrue(opened.isEmpty())
         for((id,url) in expected) {
             compose.onNodeWithTag("support.artwork.$id",useUnmergedTree=true).assertExists()
             compose.onNodeWithTag("support.project.$id").performScrollTo().assertIsDisplayed().assertHeightIsAtLeast(48.dp).performClick()
@@ -128,7 +130,7 @@ class SupportPagesTest {
     @Test fun settingsPagesNavigateOfflineAndReturnWithoutBecomingTabs()=runBlocking {
         androidx.work.testing.WorkManagerTestInitHelper.initializeTestWorkManager(app)
         val store=SessionStore(app,object:CredentialVault {override fun read(host:String):Secret?=null;override fun write(host:String,secret:Secret?)=Unit})
-        store.update {Preferences(consent=false)}
+        store.update {Preferences(consent=false,locale="en")}
         val vm=StudioViewModel(app,store)
         try {
             compose.setContent {CompositionLocalProvider(LocalUriHandler provides links) {StudioApp(vm)}}

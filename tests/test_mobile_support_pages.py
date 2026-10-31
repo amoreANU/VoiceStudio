@@ -27,8 +27,8 @@ def test_support_catalog_uses_existing_donation_destinations():
 
 def test_every_support_label_is_translated_in_every_loaded_catalog():
     support = json.loads((CONTRACT / "support.json").read_text(encoding="utf-8"))
-    addition = json.loads((CONTRACT / "strings.support-additions.en.json").read_text(encoding="utf-8"))
-    keys = {"mobile.support." + key for key in addition["mobile"]["support"]}
+    shared = json.loads((CONTRACT / "strings.mobile.en.json").read_text(encoding="utf-8"))
+    keys = {"mobile.support." + key for key in shared["mobile"]["support"]}
     keys |= {row["detailKey"] for row in support["donations"] + support["projects"]}
     keys |= {row["tierKey"] for row in support["projects"]}
     for path in (ROOT / "electron/src/renderer/src/i18n/locales").glob("*.json"):
@@ -36,7 +36,7 @@ def test_every_support_label_is_translated_in_every_loaded_catalog():
         for key in keys:
             assert isinstance(lookup(catalog, key), str) and lookup(catalog, key).strip(), (path.name, key)
         if path.stem == "en":
-            assert catalog["mobile"]["support"] == addition["mobile"]["support"]
+            assert catalog["mobile"]["support"] == shared["mobile"]["support"]
 
 
 def test_ios_resources_bundle_identical_support_content_and_offline_artwork(tmp_path):
