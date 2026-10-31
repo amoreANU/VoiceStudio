@@ -48,12 +48,14 @@ def paths():
 
 def cleanup():
     keychain, search_list = paths()
-    if search_list.is_file():
-        previous = json.loads(search_list.read_text())
-        command(["security", "list-keychains", "-d", "user", "-s", *previous])
-        search_list.unlink()
-    if keychain.exists():
-        command(["security", "delete-keychain", str(keychain)])
+    try:
+        if search_list.is_file():
+            previous = json.loads(search_list.read_text())
+            command(["security", "list-keychains", "-d", "user", "-s", *previous])
+            search_list.unlink()
+    finally:
+        if keychain.exists():
+            command(["security", "delete-keychain", str(keychain)])
 
 
 def install():

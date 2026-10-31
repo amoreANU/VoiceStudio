@@ -108,3 +108,22 @@ def test_signed_older_release_uses_the_workflows_own_signing_tools():
     assert tools["if"] == install["if"]
     assert tools["with"]["path"] + "/mobile/ios/scripts/archive_signing.py" in install["run"]
     assert steps.index(tools) < steps.index(install)
+
+
+def test_cleanup_deletes_private_keychain_even_when_search_list_restore_fails(tmp_path, monkeypatch):
+    monkeypatch.setenv("RUNNER_TEMP", str(tmp_path))
+    keychain, search_list = signing.paths()
+    keychain.touch()
+    search_list.write_text('["/tmp/existing.keychain-db"]')
+
+    def run(args, **kwargs):
+        if args[1] == "list-keychains":
+            raise RuntimeError("fixture restore failure")
+        if args[1] == "delete-keychain":
+            Path(args[-1]).unlink()
+        return b""
+
+    monkeypatch.setattr(signing, "command", run)
+    with pytest.raises(RuntimeError, match="fixture restore failure"):
+        signing.cleanup()
+    assert not keychain.exists()
