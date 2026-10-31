@@ -85,7 +85,7 @@ def install():
         if identity not in available:
             raise ValueError("The archive certificate has no valid matching private key")
         command(["security", "list-keychains", "-d", "user", "-s", str(keychain), *previous])
-        print("Existing archive identity installed; no development certificate will be requested for a missing key.")
+        print("Existing archive signing identity installed.")
     except BaseException:
         if created:
             cleanup()

@@ -86,4 +86,25 @@ def test_all_signed_ios_archives_require_reusable_identity_and_cleanup(filename,
     assert install["env"]["IOS_ARCHIVE_CERTIFICATE"] == "${{ secrets.IOS_ARCHIVE_CERTIFICATE }}"
     assert install.get("if") == archive.get("if")
     cleanup = next(step for step in steps if step.get("name") == "Remove API key")
-    assert cleanup["if"] == "always()" and "archive_signing.py cleanup" in cleanup["run"]
+    assert cleanup["if"] == "always()" and "archive_signing.py" in cleanup["run"] and " cleanup" in cleanup["run"]
+
+
+def test_unsigned_older_release_cleanup_needs_no_new_signing_helper(tmp_path):
+    workflow = yaml.load((ROOT / ".github/workflows/mobile-release.yml").read_text(), Loader=yaml.BaseLoader)
+    cleanup = next(step for step in workflow["jobs"]["ios"]["steps"] if step.get("name") == "Remove API key")
+    result = subprocess.run(["bash", "-e", "-c", cleanup["run"]], cwd=tmp_path,
+                            env={**os.environ, "RUNNER_TEMP": str(tmp_path)}, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+
+
+def test_signed_older_release_uses_the_workflows_own_signing_tools():
+    workflow = yaml.load((ROOT / ".github/workflows/mobile-release.yml").read_text(), Loader=yaml.BaseLoader)
+    steps = workflow["jobs"]["ios"]["steps"]
+    tools = next(step for step in steps if step.get("name") == "Checkout signing tools")
+    install = next(step for step in steps if step.get("name") == "Install reusable archive identity")
+    assert tools["with"]["ref"] == "${{ job.workflow_sha }}"
+    assert tools["with"]["repository"] == "${{ job.workflow_repository }}"
+    assert tools["with"]["persist-credentials"] == "false"
+    assert tools["if"] == install["if"]
+    assert tools["with"]["path"] + "/mobile/ios/scripts/archive_signing.py" in install["run"]
+    assert steps.index(tools) < steps.index(install)
